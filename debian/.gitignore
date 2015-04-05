@@ -1,0 +1,6 @@
+/*.debhelper.log
+/*.substvars
+/bazel/
+/bazel-docs/
+/bazel-examples/
+/files

@@ -1,0 +1,232 @@
+From: Kyle Moffett <kyle@moffetthome.net>
+Date: Mon, 20 Apr 2015 23:44:51 +0000
+Subject: Combine SingleJar, JavaBuilder, and ijar into embedded dirs
+
+These binaries currently need to be part of //tools/..., but there is no
+reason for them to be so.  Worse, there is no good way to build a
+//tools directory from bazel-built binaries.
+
+Since it's easy to put these into the bazel archive, let's do so.
+---
+ bootstrap_test.sh                  |  2 +-
+ compile.sh                         | 11 +++++------
+ src/BUILD                          | 12 +++---------
+ src/main/tools/BUILD               |  1 +
+ src/main/tools/embedded.BUILD      | 11 +++++++++++
+ src/main/tools/jdk.WORKSPACE       | 21 +++++++++++++++++++++
+ src/test/shell/bazel/test-setup.sh |  4 ----
+ src/test/shell/bazel/testenv.sh    |  5 -----
+ tools/jdk/BUILD                    | 19 ++++++++++++++-----
+ 9 files changed, 56 insertions(+), 30 deletions(-)
+ create mode 100644 src/main/tools/embedded.BUILD
+
+diff --git a/bootstrap_test.sh b/bootstrap_test.sh
+index 1ed31f7..3e90e94 100755
+--- a/bootstrap_test.sh
++++ b/bootstrap_test.sh
+@@ -75,7 +75,7 @@ function bootstrap() {
+   local BAZEL_SUM=$2
+   [ -x "${BAZEL_BIN}" ] || fail "syntax: bootstrap bazel-binary"
+   ${BAZEL_BIN} --blazerc=/dev/null clean || return $?
+-  ${BAZEL_BIN} --blazerc=/dev/null build --nostamp //src:bazel //src:tools || return $?
++  ${BAZEL_BIN} --blazerc=/dev/null build --nostamp //src:bazel || return $?
+ 
+   if [ -n "${BAZEL_SUM}" ]; then
+     get_outputs_sum > ${BAZEL_SUM} || return $?
+diff --git a/compile.sh b/compile.sh
+index 5ab5d4b..bcd36b4 100755
+--- a/compile.sh
++++ b/compile.sh
+@@ -383,8 +383,7 @@ if [ -z "${BAZEL_SKIP_SINGLEJAR_COMPILATION}" ]; then
+ 
+   create_deploy_jar "SingleJar_deploy" \
+       "com.google.devtools.build.singlejar.SingleJar" "output/singlejar"
+-  mkdir -p tools/jdk
+-  cp -f output/singlejar/SingleJar_deploy.jar tools/jdk
++  cp -f output/singlejar/SingleJar_deploy.jar output/
+ fi
+ 
+ if [ -z "${BAZEL_SKIP_BUILDJAR_COMPILATION}" ]; then
+@@ -394,13 +393,12 @@ if [ -z "${BAZEL_SKIP_BUILDJAR_COMPILATION}" ]; then
+ 
+   create_deploy_jar "JavaBuilder_deploy" \
+       "com.google.devtools.build.buildjar.BazelJavaBuilder" "output/buildjar"
+-  mkdir -p tools/jdk
+-  cp -f output/buildjar/JavaBuilder_deploy.jar tools/jdk
++  cp -f output/buildjar/JavaBuilder_deploy.jar output/
+ fi
+ 
+ cc_build "client" "objs" "output/client" ${BLAZE_CC_FILES[@]}
+ 
+-LDFLAGS="$LDFLAGS -lz" cc_build "ijar" "ijar" "tools/jdk/ijar" ${IJAR_CC_FILES[@]}
++LDFLAGS="$LDFLAGS -lz" cc_build "ijar" "ijar_objs" "output/ijar" ${IJAR_CC_FILES[@]}
+ 
+ if [ ! -z "$JNILIB" ] ; then
+   log "Compiling JNI libraries..."
+@@ -438,12 +436,13 @@ fi
+ 
+ cp src/main/tools/build_interface_so output/build_interface_so
+ cp src/main/tools/jdk.* output
++cp src/main/tools/embedded.BUILD output
+ 
+ touch output/client_info
+ chmod 755 output/client_info
+ 
+ log "Creating Bazel self-extracting archive..."
+-TO_ZIP="bazel-main_deploy.jar ${JNILIB} build-runfiles${EXE_EXT} process-wrapper${EXE_EXT} client_info build_interface_so ${MSYS_DLLS} jdk.WORKSPACE jdk.BUILD"
++TO_ZIP="bazel-main_deploy.jar JavaBuilder_deploy.jar SingleJar_deploy.jar ijar ${JNILIB} build-runfiles${EXE_EXT} process-wrapper${EXE_EXT} client_info build_interface_so ${MSYS_DLLS} jdk.WORKSPACE jdk.BUILD embedded.BUILD"
+ if [[ $PLATFORM == "linux" ]]; then
+     TO_ZIP="$TO_ZIP namespace-sandbox${EXE_EXT}"
+ fi
+diff --git a/src/BUILD b/src/BUILD
+index a302a5b..9ecbaf4 100644
+--- a/src/BUILD
++++ b/src/BUILD
+@@ -48,6 +48,9 @@ genrule(
+     name = "package-zip",
+     srcs = [
+         "//src/main/java:bazel-main_deploy.jar",
++        "//src/java_tools/buildjar:JavaBuilder_deploy.jar",
++        "//src/java_tools/singlejar:SingleJar_deploy.jar",
++        "//third_party/ijar",
+         "//src/main/cpp:client",
+         ":libunix",
+         "//src/main/tools:build-runfiles",
+@@ -85,15 +88,6 @@ genrule(
+ )
+ 
+ filegroup(
+-    name = "tools",
+-    srcs = [
+-        "//src/java_tools/buildjar:JavaBuilder_deploy.jar",
+-        "//src/java_tools/singlejar:SingleJar_deploy.jar",
+-        "//third_party/ijar",
+-    ],
+-)
+-
+-filegroup(
+     name = "namespace-sandbox",
+     srcs = [
+         "//src/main/tools:namespace-sandbox",
+diff --git a/src/main/tools/BUILD b/src/main/tools/BUILD
+index 9fd1a78..d04b46f 100644
+--- a/src/main/tools/BUILD
++++ b/src/main/tools/BUILD
+@@ -23,6 +23,7 @@ cc_binary(
+ filegroup(
+     name = "jdk-support",
+     srcs = [
++        "embedded.BUILD",
+         "jdk.BUILD",
+         "jdk.WORKSPACE",
+     ],
+diff --git a/src/main/tools/embedded.BUILD b/src/main/tools/embedded.BUILD
+new file mode 100644
+index 0000000..482a88c
+--- /dev/null
++++ b/src/main/tools/embedded.BUILD
+@@ -0,0 +1,11 @@
++###
++## BUILD file for files loaded from the _embedded_binaries directory.
++###
++
++package(default_visibility = ["//visibility:public"])
++
++exports_files([
++    "JavaBuilder_deploy.jar",
++    "SingleJar_deploy.jar",
++    "ijar",
++])
+diff --git a/src/main/tools/jdk.WORKSPACE b/src/main/tools/jdk.WORKSPACE
+index 9f69602..d059f83 100644
+--- a/src/main/tools/jdk.WORKSPACE
++++ b/src/main/tools/jdk.WORKSPACE
+@@ -1,6 +1,27 @@
+ # External dependencies for the java_* rules.
+ 
+ new_local_repository(
++    name = "__embedded_dir__",
++    path = __embedded_dir__,
++    build_file = __embedded_dir__ + "/embedded.BUILD",
++)
++
++bind(
++    name = "__embedded_dir__/JavaBuilder_deploy.jar",
++    actual = "@__embedded_dir__//:JavaBuilder_deploy.jar",
++)
++
++bind(
++    name = "__embedded_dir__/SingleJar_deploy.jar",
++    actual = "@__embedded_dir__//:SingleJar_deploy.jar",
++)
++
++bind(
++    name = "__embedded_dir__/ijar",
++    actual = "@__embedded_dir__//:ijar",
++)
++
++new_local_repository(
+     name = "local-jdk",
+     path = DEFAULT_SERVER_JAVABASE,
+     build_file = __embedded_dir__ + "/jdk.BUILD",
+diff --git a/src/test/shell/bazel/test-setup.sh b/src/test/shell/bazel/test-setup.sh
+index 9b5b970..dbec49b 100755
+--- a/src/test/shell/bazel/test-setup.sh
++++ b/src/test/shell/bazel/test-setup.sh
+@@ -105,10 +105,6 @@ function create_new_workspace() {
+ 
+   copy_tools_directory
+ 
+-  ln -s "${javabuilder_path}" tools/jdk/JavaBuilder_deploy.jar
+-  ln -s "${singlejar_path}"  tools/jdk/SingleJar_deploy.jar
+-  ln -s "${ijar_path}" tools/jdk/ijar
+-
+   if [[ -d ${jdk_dir} ]] ; then
+     ln -s ${jdk_dir} tools/jdk/jdk
+   fi
+diff --git a/src/test/shell/bazel/testenv.sh b/src/test/shell/bazel/testenv.sh
+index c54cf71..ca3436f 100755
+--- a/src/test/shell/bazel/testenv.sh
++++ b/src/test/shell/bazel/testenv.sh
+@@ -33,11 +33,6 @@ jdk_dir="${TEST_SRCDIR}/external/local-jdk"
+ # Tools directory location
+ tools_dir="${TEST_SRCDIR}/tools"
+ 
+-# Java tooling
+-javabuilder_path="${TEST_SRCDIR}/src/java_tools/buildjar/JavaBuilder_deploy.jar"
+-singlejar_path="${TEST_SRCDIR}/src/java_tools/singlejar/SingleJar_deploy.jar"
+-ijar_path="${TEST_SRCDIR}/third_party/ijar/ijar"
+-
+ # Third-party
+ PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
+ case "${PLATFORM}" in
+diff --git a/tools/jdk/BUILD b/tools/jdk/BUILD
+index ee6ffd7..42c1681 100644
+--- a/tools/jdk/BUILD
++++ b/tools/jdk/BUILD
+@@ -62,11 +62,20 @@ java_toolchain(
+     target_version = "8",
+ )
+ 
+-exports_files([
+-    "JavaBuilder_deploy.jar",
+-    "ijar",
+-    "SingleJar_deploy.jar",
+-])
++filegroup(
++    name = "JavaBuilder_deploy.jar",
++    srcs = ["//external:__embedded_dir__/JavaBuilder_deploy.jar"],
++)
++
++filegroup(
++    name = "SingleJar_deploy.jar",
++    srcs = ["//external:__embedded_dir__/SingleJar_deploy.jar"],
++)
++
++filegroup(
++    name = "ijar",
++    srcs = ["//external:__embedded_dir__/ijar"],
++)
+ 
+ filegroup(
+     name = "srcs",

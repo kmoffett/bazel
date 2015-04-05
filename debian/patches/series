@@ -1,0 +1,12 @@
+0001-compile.sh-Use-CXX-CXXFLAGS-for-C-compiler-and-its-o.patch
+0002-blaze.cc-Do-not-require-bazel-main_deploy.jar-as-the.patch
+0003-Combine-SingleJar-JavaBuilder-and-ijar-into-embedded.patch
+0004-blaze.cc-Allow-non-self-extracting-blaze-via-system-.patch
+0005-Remove-xcode-ios-objc-support.patch
+0006-Disable-bazelrc-file-creation.patch
+0007-Use-system-protobuf-libraries.patch
+0008-Use-system-apache-commons-libraries.patch
+0009-HACK-Try-to-use-multiarch-compatible-compiler-settin.patch
+0010-HACK-Remove-more-darwin-specific-logic.patch
+0011-HACK-Nuke-javascript-files-not-used-by-self-hosted-b.patch
+0012-HACK-Switch-more-libraries-to-system-ones.patch

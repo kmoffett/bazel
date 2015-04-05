@@ -1,0 +1,148 @@
+#!/usr/bin/make -f
+
+DH_VERBOSE = 1
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/default.mk
+
+DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
+DEB_BUILD_MULTIARCH ?= $(shell dpkg-architecture -qDEB_BUILD_MULTIARCH)
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+DEB_VERSION = $(shell dpkg-parsechangelog --show-field=Version)
+
+BAZEL_STARTUP_FLAGS = --blazerc=/dev/null
+BAZEL_BUILD_FLAGS = \
+	-c opt \
+	--copt=-DSYSTEM_INSTALL_BASE='"/usr/lib/$3/bazel"' \
+	$(addprefix --copt=,$(CPPFLAGS)) \
+	$(addprefix --conlyopt=,$(CFLAGS)) \
+	$(addprefix --cxxopt=,$(CXXFLAGS)) \
+	$(addprefix --linkopt=,$(LDFLAGS))
+
+%:
+	dh $@ 
+
+override_dh_auto_clean:
+	rm -rf output
+	rm -f bazel-bazel
+	rm -f bazel-bin
+	rm -f bazel-genfiles
+	rm -f bazel-out
+	rm -f bazel-testlogs
+	rm -rf fromhost
+	rm -f base_workspace/bazel-base_workspace
+	rm -f base_workspace/bazel-bazel
+	rm -f base_workspace/bazel-bin
+	rm -f base_workspace/bazel-genfiles
+	rm -f base_workspace/bazel-out
+	rm -f base_workspace/examples
+	rm -f base_workspace/third_party
+	rm -f base_workspace/tools
+	rm -f tools/jdk/jdk
+	rm -rf third_party/system_provided
+
+SYSTEM_PROVIDED_JARS = \
+	commons-collections3.jar \
+	commons-compress.jar \
+	commons-logging.jar \
+	gson.jar \
+	hamcrest-core.jar \
+	httpclient.jar \
+	httpcore.jar \
+	joda-time.jar \
+	jsr305.jar \
+	junit4.jar \
+	plexus-interpolation.jar \
+	plexus-utils2.jar \
+	protobuf.jar \
+	tomcat8-annotations-api.jar
+
+override_dh_auto_configure:
+	mkdir third_party/system_provided
+	ln -s /usr/bin/protoc third_party/system_provided/
+	for jar in $(SYSTEM_PROVIDED_JARS); do \
+		ln -s "/usr/share/java/$${jar}" third_party/system_provided/; \
+	done
+
+define BUILD_AND_CHECKSUM_COMMANDS
+	mkdir -p debian/tmp-bootstrap/$1
+	$2 $(BAZEL_STARTUP_FLAGS) clean
+	$2 $(BAZEL_STARTUP_FLAGS) build $(BAZEL_BUILD_FLAGS) \
+		--host_cpu=$(DEB_BUILD_MULTIARCH) \
+		--cpu=$3 \
+		$4 //src:bazel
+
+	# runfiles/MANIFEST & runfiles_manifest contain absolute path, ignore.
+	find bazel-bin bazel-genfiles -type f \
+		! -name MANIFEST \
+		! -name '*.runfiles_manifest' \
+		-print0 | xargs -0r md5sum -- \
+		| sort -k2 >debian/tmp-bootstrap/$1/md5sum
+
+	cp bazel-bin/src/main/cpp/client debian/tmp-bootstrap/$1/bazel
+	mkdir -p debian/tmp-bootstrap/$1/install_base/_embedded_binaries
+	unzip -d debian/tmp-bootstrap/$1/install_base/_embedded_binaries \
+		bazel-genfiles/src/install_base.zip
+	find debian/tmp-bootstrap/$1/install_base -print0 | xargs -0r touch --
+endef
+
+BAZEL = debian/tmp-bootstrap/$1/bazel --install_base=debian/tmp-bootstrap/$1/install_base
+
+override_dh_auto_build:
+	mkdir -p debian/tmp-bootstrap
+	# First, we need to bootstrap a fully working bazel from scratch
+	./compile.sh
+	#
+	# Then we use that to build a proper bazel-built bazel for the build machine
+	$(call BUILD_AND_CHECKSUM_COMMANDS,build1, \
+		output/bazel,$(DEB_BUILD_MULTIARCH),--nostamp)
+	#
+	# Then we use that bazel to build a bazel for the final host machine, plus
+	# a few extra files
+	$(call BUILD_AND_CHECKSUM_COMMANDS,host, \
+		$(call BAZEL,build1),$(DEB_HOST_MULTIARCH), \
+		--distinct_host_configuration=true \
+		//src/main/java:build-encyclopedia.html \
+		//src/main/java:skylark-library.html )
+	cp	bazel-genfiles/src/main/java/build-encyclopedia.html \
+		bazel-genfiles/src/main/java/skylark-library.html \
+		debian/tmp-bootstrap/host/
+
+override_dh_auto_test:
+	# Use the build1 bazel binary to build _another_ bazel, and make sure both
+	# match exactly
+	$(call BUILD_AND_CHECKSUM_COMMANDS,build2, \
+		$(call BAZEL,build1),$(DEB_BUILD_MULTIARCH),--nostamp)
+	diff -U 0 debian/tmp-bootstrap/build1/md5sum \
+		debian/tmp-bootstrap/build2/md5sum >&2
+
+	# Now run the full testsuite
+	# TODO(knuq): This is broken due to k8=>x86_64-linux-gnu arch rename
+	#$(call BAZEL,build1) --blazerc=/dev/null test \
+	#	--host_cpu=$(DEB_HOST_MULTIARCH) \
+	#	-k --test_output=errors //src/...
+
+override_dh_auto_install:
+	# Move the host binaries into debian/tmp for installation
+	install -m 755 -D debian/tmp-bootstrap/host/bazel debian/tmp/usr/bin/bazel
+	#
+	# Create the base_workspace //third_party directory
+	# TODO(kmoffett): Move this code into //tools/...
+	install -d debian/tmp/usr/share/bazel/base_workspace
+	install -m 644 -D debian/third_party.BUILD debian/tmp/usr/share/bazel/base_workspace/third_party/BUILD
+	ln -s ../../../../bin/protoc debian/tmp/usr/share/bazel/base_workspace/third_party/protoc
+	ln -s ../../../java/protobuf.jar debian/tmp/usr/share/bazel/base_workspace/third_party/protobuf.jar
+	#
+	# Create the base_workspace //tools directory and fix permissions
+	cp -R tools debian/tmp/usr/share/bazel/base_workspace/
+	chmod 644 debian/tmp/usr/share/bazel/base_workspace/tools/genrule/genrule-setup.sh
+	#
+	# Create the install_base directory and fix permissions
+	install -d debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/bazel
+	mv debian/tmp-bootstrap/host/install_base/* debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/bazel/
+	chmod u=rwX,go=rX -R debian/tmp/usr/lib debian/tmp/usr/share
+	chmod 644 debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/bazel/_embedded_binaries/bazel-main_deploy.jar
+	chmod 644 debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/bazel/_embedded_binaries/JavaBuilder_deploy.jar
+	chmod 644 debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/bazel/_embedded_binaries/SingleJar_deploy.jar
+	chmod 644 debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/bazel/_embedded_binaries/client_info
+	chmod 644 debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/bazel/_embedded_binaries/install_base_key
+	chmod 644 debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/bazel/_embedded_binaries/java.version

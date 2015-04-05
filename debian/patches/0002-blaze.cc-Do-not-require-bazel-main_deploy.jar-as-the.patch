@@ -1,0 +1,66 @@
+From: Kyle Moffett <kyle@moffetthome.net>
+Date: Tue, 21 Apr 2015 02:47:03 +0000
+Subject: blaze.cc: Do not require bazel-main_deploy.jar as the first file
+
+If both compile.sh and BUILD use the same filename for this JAR, then
+it would be perfectly reasonable to just hardcode its name into blaze.cc
+instead of relying on the fact that it is the first file in the blaze
+self-extracting-executable archive.
+
+This also paves the way for a future change that supports pre-unpacked
+base_install data (for distros, which don't usually like such
+self-extracting executables).
+---
+ compile.sh            | 4 ++--
+ src/BUILD             | 2 --
+ src/main/cpp/blaze.cc | 2 +-
+ 3 files changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/compile.sh b/compile.sh
+index 35fbcf0..5ab5d4b 100755
+--- a/compile.sh
++++ b/compile.sh
+@@ -372,7 +372,7 @@ if [ -z "${BAZEL_SKIP_JAVA_COMPILATION}" ]; then
+     cp src/main/java/$i output/classes/$i
+   done
+ 
+-  create_deploy_jar "libblaze" "com.google.devtools.build.lib.bazel.BazelMain" \
++  create_deploy_jar "bazel-main_deploy" "com.google.devtools.build.lib.bazel.BazelMain" \
+       output third_party/javascript
+ fi
+ 
+@@ -443,7 +443,7 @@ touch output/client_info
+ chmod 755 output/client_info
+ 
+ log "Creating Bazel self-extracting archive..."
+-TO_ZIP="libblaze.jar ${JNILIB} build-runfiles${EXE_EXT} process-wrapper${EXE_EXT} client_info build_interface_so ${MSYS_DLLS} jdk.WORKSPACE jdk.BUILD"
++TO_ZIP="bazel-main_deploy.jar ${JNILIB} build-runfiles${EXE_EXT} process-wrapper${EXE_EXT} client_info build_interface_so ${MSYS_DLLS} jdk.WORKSPACE jdk.BUILD"
+ if [[ $PLATFORM == "linux" ]]; then
+     TO_ZIP="$TO_ZIP namespace-sandbox${EXE_EXT}"
+ fi
+diff --git a/src/BUILD b/src/BUILD
+index 1677995..a302a5b 100644
+--- a/src/BUILD
++++ b/src/BUILD
+@@ -48,8 +48,6 @@ genrule(
+     name = "package-zip",
+     srcs = [
+         "//src/main/java:bazel-main_deploy.jar",
+-        # The jar must the first in the zip file because the client launcher
+-        # looks for the first entry in the zip file for the java server.
+         "//src/main/cpp:client",
+         ":libunix",
+         "//src/main/tools:build-runfiles",
+diff --git a/src/main/cpp/blaze.cc b/src/main/cpp/blaze.cc
+index f324c95..2354570 100644
+--- a/src/main/cpp/blaze.cc
++++ b/src/main/cpp/blaze.cc
+@@ -294,7 +294,7 @@ static vector<string> GetArgumentArray() {
+ 
+   result.push_back("-jar");
+   result.push_back(blaze_util::JoinPath(real_install_dir,
+-                                        globals->extracted_binaries[0]));
++                                        "bazel-main_deploy.jar"));
+ 
+   if (!globals->options.batch) {
+     result.push_back("--max_idle_secs");

@@ -1,0 +1,5 @@
+bazel (0~pre20150415-ff6458-1) unstable; urgency=low
+
+  * Initial release (Closes: #782654)
+
+ -- Kyle Moffett <kyle@moffetthome.net>  Sat, 11 Apr 2015 21:22:00 +0000

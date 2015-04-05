@@ -1,0 +1,9 @@
+# This is the blaze server executable, not a shared library
+bazel binary: jar-not-in-usr-share usr/lib/*/bazel/_embedded_binaries/bazel-main_deploy.jar
+bazel binary: jar-not-in-usr-share usr/lib/*/bazel/_embedded_binaries/JavaBuilder_deploy.jar
+bazel binary: jar-not-in-usr-share usr/lib/*/bazel/_embedded_binaries/SingleJar_deploy.jar
+
+# Not sure why this is bogus; version 52 is expected with OpenJDK 8
+bazel binary: unknown-java-class-version usr/lib/*/bazel/_embedded_binaries/JavaBuilder_deploy.jar (com/google/devtools/build/buildjar/AbstractJavaBuilder$1.class -> 52)
+bazel binary: unknown-java-class-version usr/lib/*/bazel/_embedded_binaries/SingleJar_deploy.jar (com/google/devtools/build/lib/shell/AbnormalTerminationException.class -> 52)
+bazel binary: unknown-java-class-version usr/lib/*/bazel/_embedded_binaries/bazel-main_deploy.jar (com/google/devtools/build/docgen/BlazeRuleHelpPrinter.class -> 52)

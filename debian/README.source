@@ -1,0 +1,8 @@
+bazel for Debian
+----------------
+
+This is an unreleased pre-alpha version of Bazel downloaded from:
+https://github.com/google/bazel/archive/bf73db9da19e37ed0823d9822710922be2e14f40.tar.gz
+
+ -- Kyle Moffett <kyle@moffetthome.net>  Sun, 05 Apr 2015 05:55:18 +0000
+

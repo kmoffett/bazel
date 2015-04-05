@@ -1,0 +1,205 @@
+From: Kyle Moffett <kyle@moffetthome.net>
+Date: Tue, 14 Apr 2015 18:58:28 +0000
+Subject: blaze.cc: Allow non-self-extracting blaze via system install_base
+
+Distros prefer not to have a bunch of different binaries packed up into
+a single self-extracting executable; it makes all the packaging tools
+much more difficult to use, beause they can't see inside the binary to
+track down shared library and Java dependencies.
+
+This provides a "feature" where distros can compile blaze with a
+pre-defined install_base directory where it can find all of the files it
+wants without needing to extract them.
+
+(Also rename the "package-zip" target to install_base.zip so that it can
+be easily extacted by the distro into the relevant destination.
+---
+ compile.sh            |  4 +--
+ src/BUILD             | 18 ++++++------
+ src/main/cpp/blaze.cc | 80 ++++++++++++++++++++++++++++++++++++++++++---------
+ 3 files changed, 77 insertions(+), 25 deletions(-)
+
+diff --git a/compile.sh b/compile.sh
+index bcd36b4..28d050d 100755
+--- a/compile.sh
++++ b/compile.sh
+@@ -450,8 +450,8 @@ fi
+ (cd output/ ; cat client ${TO_ZIP} | ${MD5SUM} | awk '{ print $1; }' > install_base_key)
+ (cd output/ ; echo "${JAVA_VERSION}" > java.version)
+ (cd output/ ; find . -type f | xargs -P 10 touch -t 198001010000)
+-(cd output/ ; zip $ZIPOPTS -q package.zip ${TO_ZIP} install_base_key java.version)
+-cat output/client output/package.zip > output/bazel
++(cd output/ ; zip $ZIPOPTS -q install_base.zip ${TO_ZIP} install_base_key java.version)
++cat output/client output/install_base.zip > output/bazel
+ zip -qA output/bazel \
+   || echo "(Non-critical error, ignore.)"
+ 
+diff --git a/src/BUILD b/src/BUILD
+index 9ecbaf4..3b0b25b 100644
+--- a/src/BUILD
++++ b/src/BUILD
+@@ -45,7 +45,7 @@ genrule(
+ )
+ 
+ genrule(
+-    name = "package-zip",
++    name = "install_base-zip",
+     srcs = [
+         "//src/main/java:bazel-main_deploy.jar",
+         "//src/java_tools/buildjar:JavaBuilder_deploy.jar",
+@@ -62,23 +62,23 @@ genrule(
+         "install_base_key",
+         ":java-version",
+     ],
+-    outs = ["package.zip"],
++    outs = ["install_base.zip"],
+     # Terrible hack to remove timestamps in the zip file
+-    cmd = "mkdir $(@D)/package-zip && " +
+-          "cp $(SRCS) $(@D)/package-zip && " +
+-          "touch -t 198001010000.00 $(@D)/package-zip/* && " +
+-          "zip -qj $@ $(@D)/package-zip/* && " +
+-          "rm -fr $(@D)/package-zip",
++    cmd = "mkdir $(@D)/install_base-zip && " +
++          "cp $(SRCS) $(@D)/install_base-zip && " +
++          "touch -t 198001010000.00 $(@D)/install_base-zip/* && " +
++          "zip -qj $@ $(@D)/install_base-zip/* && " +
++          "rm -fr $(@D)/install_base-zip",
+ )
+ 
+ genrule(
+     name = "bazel-bin",
+     srcs = [
+         "//src/main/cpp:client",
+-        "package-zip",
++        "install_base.zip",
+     ],
+     outs = ["bazel"],
+-    cmd = "cat $(location //src/main/cpp:client) package-zip > $@ && zip -qA $@",
++    cmd = "cat $(location //src/main/cpp:client) install_base.zip > $@ && zip -qA $@",
+     executable = 1,
+     output_to_bindir = 1,
+     visibility = [
+diff --git a/src/main/cpp/blaze.cc b/src/main/cpp/blaze.cc
+index 2354570..b7d2ac7 100644
+--- a/src/main/cpp/blaze.cc
++++ b/src/main/cpp/blaze.cc
+@@ -158,7 +158,6 @@ void InitGlobals() {
+ ////////////////////////////////////////////////////////////////////////
+ // Logic
+ 
+-
+ // Returns the canonical form of the base dir given a root and a hashable
+ // string. The resulting dir is composed of the root + md5(hashable)
+ static string GetHashedBaseDir(const string &root,
+@@ -170,10 +169,61 @@ static string GetHashedBaseDir(const string &root,
+   return root + "/" + digest.String();
+ }
+ 
++#ifdef SYSTEM_INSTALL_BASE
++// Computes the system install base and populates extracted_binaries from it.
++static void FindSystemInstallBase() {
++  // If --install_base was not set on the command-line, use the built-in value.
++  if (globals->options.install_base.empty())
++    globals->options.install_base = SYSTEM_INSTALL_BASE;
++
++  string bindir = globals->options.install_base + "/_embedded_binaries/";
++
++  vector<string> walk_subdirs;
++  walk_subdirs.push_back("");
++  while (!walk_subdirs.empty()) {
++    string subdir_relpath = walk_subdirs.back();
++    walk_subdirs.pop_back();
++
++    string subdir_abspath = bindir + subdir_relpath;
++    DIR *dp = opendir(subdir_abspath.c_str());
++    if (!dp)
++      die(blaze_exit_code::LOCAL_ENVIRONMENTAL_ERROR,
++          "\nFailed to list %s install base directory %s: (%d) %s",
++          globals->options.GetProductName().c_str(),
++          subdir_abspath.c_str(), errno, strerror(errno));
++
++    struct dirent *entry;
++    while ((entry = readdir(dp))) {
++      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
++        continue;
++
++      string entry_relpath = subdir_relpath + entry->d_name;
++      string entry_abspath = bindir + entry_relpath;
++      struct stat st;
++      if (stat(entry_abspath.c_str(), &st)) {
++        die(blaze_exit_code::LOCAL_ENVIRONMENTAL_ERROR,
++            "\nFailed to stat %s install base file %s: (%d) %s",
++            globals->options.GetProductName().c_str(),
++            entry_abspath.c_str(), errno, strerror(errno));
++      }
++      if (S_ISDIR(st.st_mode))
++        walk_subdirs.push_back(entry_relpath + "/");
++      else if (S_ISREG(st.st_mode))
++        globals->extracted_binaries.push_back(entry_relpath);
++      else
++        die(blaze_exit_code::LOCAL_ENVIRONMENTAL_ERROR,
++            "\nInvalid %s install base file mode %s: %o",
++            globals->options.GetProductName().c_str(),
++            entry_abspath.c_str(), st.st_mode);
++    }
++    closedir(dp);
++  }
++}
++#else
+ // Returns the install base (the root concatenated with the contents of the file
+ // 'install_base_key' contained as a ZIP entry in the Blaze binary); as a side
+ // effect, it also populates the extracted_binaries global variable.
+-static string GetInstallBase(const string &root, const string &self_path) {
++static void FindExtractedInstallBase(const string &self_path) {
+   string key_file = "install_base_key";
+   struct archive *blaze_zip = archive_read_new();
+   archive_read_support_format_zip(blaze_zip);
+@@ -213,8 +263,14 @@ static string GetInstallBase(const string &root, const string &self_path) {
+         "\nFailed to close install_base_key's containing zip file");
+   }
+ 
+-  return root + "/" + install_base_key;
++  // The default install_base is <output_user_root>/install/<md5(blaze)>
++  // but if an install_base is specified on the command line, we use that as
++  // the base instead.
++  if (globals->options.install_base.empty())
++    globals->options.install_base =
++        globals->options.output_user_root + "/install/" + install_base_key;
+ }
++#endif /* not SYSTEM_INSTALL_BASE */
+ 
+ // Escapes colons by replacing them with '_C' and underscores by replacing them
+ // with '_U'. E.g. "name:foo_bar" becomes "name_Cfoo_Ubar"
+@@ -1333,17 +1389,11 @@ static void ComputeBaseDirectories(const string self_path) {
+     globals->options.batch = true;
+   }
+ 
+-  // The default install_base is <output_user_root>/install/<md5(blaze)>
+-  // but if an install_base is specified on the command line, we use that as
+-  // the base instead.
+-  if (globals->options.install_base.empty()) {
+-    string install_user_root = globals->options.output_user_root + "/install";
+-    globals->options.install_base =
+-        GetInstallBase(install_user_root, self_path);
+-  } else {
+-    // We call GetInstallBase anyway to populate extracted_binaries.
+-    GetInstallBase("", self_path);
+-  }
++#ifdef SYSTEM_INSTALL_BASE
++  FindSystemInstallBase();
++#else
++  FindExtractedInstallBase(self_path);
++#endif
+ 
+   if (globals->options.output_base.empty()) {
+     globals->options.output_base = GetHashedBaseDir(
+@@ -1641,7 +1691,9 @@ int main(int argc, const char *argv[]) {
+   WarnFilesystemType(globals->options.output_base);
+   EnsureFiniteStackLimit();
+ 
++#ifndef SYSTEM_INSTALL_BASE
+   ExtractData(self_path);
++#endif
+   EnsureCorrectRunningVersion();
+   KillRunningServerIfDifferentStartupOptions();
+ 
