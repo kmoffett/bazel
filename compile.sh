@@ -66,57 +66,6 @@ function log() {
   fi
 }
 
-function write_fromhost_build() {
-  case "${PLATFORM}" in
-    linux)
-      cat << EOF > fromhost/BUILD
-package(default_visibility = ["//visibility:public"])
-cc_library(
-  name = "libarchive",
-  srcs = [],
-  hdrs = [],
-)
-EOF
-
-      ;;
-    darwin)
-      if [[ -e $homebrew_header ]]; then
-        rm -f fromhost/*.[ah]
-        touch fromhost/empty.c
-        # For use with Homebrew.
-        archive_dir=$(dirname $(dirname $homebrew_header))
-        cp ${archive_dir}/lib/*.a ${archive_dir}/include/*.h fromhost/
-        cat << EOF > fromhost/BUILD
-package(default_visibility = ["//visibility:public"])
-cc_library(
-  name = "libarchive",
-  srcs = glob(["*.a"]) + ["empty.c"],
-  hdrs = glob(["*.h"]),
-  includes  = ["."],
-  linkopts = ["-lxml2", "-liconv", "-lbz2", "-lz", ],
-)
-EOF
-
-      elif [[ -e $macports_header ]]; then
-        # For use with Macports.
-        archive_dir=$(dirname $(dirname $macports_header)) rm -f fromhost/*.[ah]
-        touch fromhost/empty.c
-        cp "${archive_dir}"/include/{archive.h,archive_entry.h} fromhost/
-        cp "${archive_dir}"/lib/{libarchive,liblzo2,liblzma,libcharset,libbz2,libxml2,libz,libiconv}.a \
-          fromhost/
-        cat << EOF > fromhost/BUILD
-package(default_visibility = ["//visibility:public"])
-cc_library(
-  name = "libarchive",
-  srcs = glob(["*.a"]) + ["empty.c"],
-  hdrs = glob(["*.h"]),
-  includes  = ["."],
-)
-EOF
-      fi
-  esac
-}
-
 # Create symlinks so we can use tools and examples from the base_workspace.
 base_workspace=$(pwd)/base_workspace
 mkdir -p $base_workspace
@@ -134,77 +83,14 @@ linux)
   JAVA_HOME="${JAVA_HOME:-$(readlink -f $(which javac) | sed 's_/bin/javac__')}"
   PROTOC=${PROTOC:-third_party/system_provided/protoc}
   ;;
-
-darwin)
-  JNILIB="libunix.dylib"
-  MD5SUM="md5"
-  if [[ -z "$JAVA_HOME" ]]; then
-    JAVA_HOME="$(/usr/libexec/java_home -v 1.8+ 2> /dev/null)" \
-      || fail "Could not find JAVA_HOME, please ensure a JDK (version 1.8+) is installed."
-  fi
-  PROTOC=${PROTOC:-third_party/protobuf/protoc.darwin}
-
-  homebrew_header=$(ls -1 $(brew --prefix libarchive 2>/dev/null)/include/archive.h 2>/dev/null | head -n1)
-  macports_header=$(port contents libarchive 2>/dev/null | grep /archive.h$ | xargs)
-  if [[ -e $homebrew_header ]]; then
-      # For use with Homebrew.
-      archive_dir=$(dirname $(dirname $homebrew_header))
-      ARCHIVE_CFLAGS="-I${archive_dir}/include"
-      LDFLAGS="-L${archive_dir}/lib -larchive $LDFLAGS"
-
-  elif [[ -e $macports_header ]]; then
-      # For use with Macports.
-      ARCHIVE_CFLAGS="-Ifromhost"
-      # Link libarchive statically
-      LDFLAGS="fromhost/libarchive.a fromhost/liblzo2.a \
-             fromhost/liblzma.a fromhost/libcharset.a \
-             fromhost/libbz2.a fromhost/libxml2.a \
-             fromhost/libz.a fromhost/libiconv.a \
-             $LDFLAGS"
-  else
-      log "WARNING: Could not find libarchive installation, proceeding bravely."
-  fi
-
+*)
+  echo "Unknown platform: ${PLATFORM}" >&2
+  exit 1
   ;;
-
-msys*|mingw*)
-  # Use a simplified platform string.
-  PLATFORM="mingw"
-  # Workaround for msys issue which causes omission of std::to_string.
-  CXXFLAGS="$CXXFLAGS -D_GLIBCXX_USE_C99 -D_GLIBCXX_USE_C99_DYNAMIC"
-  LDFLAGS="-larchive ${LDFLAGS}"
-  MD5SUM="md5sum"
-  EXE_EXT=".exe"
-  PATHSEP=";"
-  # Find the latest available version of the SDK.
-  JAVA_HOME="${JAVA_HOME:-$(ls -d /c/Program\ Files/Java/jdk* | sort | tail -n 1)}"
-  # We do not use the JNI library on Windows.
-  JNILIB=""
-  PROTOC=${PROTOC:-protoc}
-
-  # The newer version of GCC on msys is stricter and removes some important function
-  # declarations from the environment if using c++0x / c++11.
-  CPPSTD="gnu++11"
-
-  # Ensure that we are using the cygwin gcc, not the mingw64 gcc.
-  ${CC} -v 2>&1 | grep "Target: .*mingw.*" > /dev/null &&
-    fail "mingw gcc detected. Please set CC to point to the msys/Cygwin gcc."
-  ${CPP} -v 2>&1 | grep "Target: .*mingw.*" > /dev/null &&
-    fail "mingw g++ detected. Please set CPP to point to the msys/Cygwin g++."
-
-  MSYS_DLLS="msys-2.0.dll msys-gcc_s-seh-1.dll msys-stdc++-6.dll"
-  for dll in $MSYS_DLLS ; do
-    cp "/usr/bin/$dll" "output/$dll"
-  done
 esac
 
 [[ -x "${PROTOC-}" ]] \
     || fail "Protobuf compiler not found in ${PROTOC-}"
-
-mkdir -p fromhost
-if [ ! -f fromhost/BUILD ]; then
-  write_fromhost_build
-fi
 
 test -z "$JAVA_HOME" && fail "JDK not found, please set \$JAVA_HOME."
 rm -f tools/jdk/jdk && ln -s "${JAVA_HOME}" tools/jdk/jdk

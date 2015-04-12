@@ -52,8 +52,6 @@ cc_binary(
     ],
     includes = ["."],
     linkopts = select({
-        "//src:darwin": [
-        ],
         "//conditions:default": [
             "-larchive",
             "-lrt",
@@ -61,11 +59,6 @@ cc_binary(
     }),
     visibility = ["//src:__pkg__"],
     deps = select({
-        "//src:darwin": [
-            ":md5",
-            ":util",
-            "//fromhost:libarchive",
-        ],
         "//conditions:default": [
             ":md5",
             ":util",
