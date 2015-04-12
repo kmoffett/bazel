@@ -7,13 +7,7 @@ filegroup(
 
 filegroup(
     name = "protoc",
-    srcs = select({
-        ":windows_mingw": ["protobuf/protoc.exe"],
-        ":windows_msys64_mingw64": ["protobuf/protoc.exe"],
-        ":windows_clang": ["protobuf/protoc.exe"],
-        ":darwin": ["protobuf/protoc.darwin"],
-        "//conditions:default": ["protobuf/protoc.linux-i686"],
-    }),
+    srcs = ["system_provided/protoc"],
 )
 
 java_import(
@@ -181,7 +175,7 @@ java_import(
 
 java_import(
     name = "protobuf",
-    jars = ["protobuf/protobuf-2.5.0.jar"],
+    jars = ["system_provided/protobuf.jar"],
 )
 
 java_import(

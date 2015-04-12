@@ -35,15 +35,8 @@ tools_dir="${TEST_SRCDIR}/tools"
 
 # Third-party
 PLATFORM="$(uname -s | tr 'A-Z' 'a-z')"
-case "${PLATFORM}" in
-  darwin)
-    protoc_compiler="${TEST_SRCDIR}/third_party/protobuf/protoc.darwin"
-    ;;
-  *)
-    protoc_compiler="${TEST_SRCDIR}/third_party/protobuf/protoc.amd64"
-    ;;
-esac
-protoc_jar="${TEST_SRCDIR}/third_party/protobuf/protobuf-*.jar"
+protoc_compiler="${TEST_SRCDIR}/third_party/system_provided/protoc"
+protoc_jar="${TEST_SRCDIR}/third_party/system_provided/protobuf.jar"
 junit_jar="${TEST_SRCDIR}/third_party/junit/junit-*.jar"
 hamcrest_jar="${TEST_SRCDIR}/third_party/hamcrest/hamcrest-*.jar"
 

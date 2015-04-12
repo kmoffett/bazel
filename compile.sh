@@ -50,7 +50,7 @@ DIRS=$(echo src/main/java output/src)
 SINGLEJAR_DIRS="src/java_tools/singlejar/java src/main/java/com/google/devtools/build/lib/shell"
 SINGLEJAR_LIBRARIES="third_party/guava/guava-18.0.jar third_party/jsr305/jsr-305.jar"
 BUILDJAR_DIRS="src/java_tools/buildjar/java/com/google/devtools/build/buildjar output/src/com/google/devtools/build/lib/view/proto"
-BUILDJAR_LIBRARIES="third_party/guava/guava-18.0.jar third_party/protobuf/protobuf-2.5.0.jar third_party/jsr305/jsr-305.jar"
+BUILDJAR_LIBRARIES="third_party/guava/guava-18.0.jar third_party/system_provided/protobuf.jar third_party/jsr305/jsr-305.jar"
 
 MSYS_DLLS=""
 PATHSEP=":"
@@ -132,7 +132,7 @@ linux)
   MD5SUM="md5sum"
   # JAVA_HOME must point to a Java 8 installation.
   JAVA_HOME="${JAVA_HOME:-$(readlink -f $(which javac) | sed 's_/bin/javac__')}"
-  PROTOC=${PROTOC:-third_party/protobuf/protoc.linux-i686}
+  PROTOC=${PROTOC:-third_party/system_provided/protoc}
   ;;
 
 darwin)
