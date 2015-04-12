@@ -457,18 +457,4 @@ zip -qA output/bazel \
 
 chmod 755 output/bazel
 
-# Create a bazelrc file with the base_workspace directory in the package path.
-package_path="build --package_path %workspace%:$base_workspace"
-if [ ! -f $HOME/.bazelrc ]; then
-  log "Creating a .bazelrc pointing to $base_workspace"
-  cat > $HOME/.bazelrc <<EOF
-$package_path
-EOF
-else
-  warning="You already have a .bazelrc. please modify it to add "
-  warning="$warning $base_workspace to your build package path."
-  old_line=$(fgrep "build --package_path " ~/.bazelrc) || true
-  [[ $package_path != $old_line ]] && log "$warning"
-fi
-
 log "Build successful! Binary is here: ${PWD}/output/bazel"
