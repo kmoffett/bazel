@@ -31,17 +31,16 @@ filegroup(
 filegroup(
     name = "toolchain",
     srcs = [
-        ":cc-compiler-darwin",
-        ":cc-compiler-local",
+        ":cc-compiler-x86_64-linux-gnu",
         ":empty",
     ],
 )
 
 cc_toolchain(
-    name = "cc-compiler-local",
+    name = "cc-compiler-x86_64-linux-gnu",
     all_files = ":empty",
     compiler_files = ":empty",
-    cpu = "local",
+    cpu = "x86_64-linux-gnu",
     dwp_files = ":empty",
     dynamic_runtime_libs = [":empty"],
     linker_files = ":empty",
@@ -52,24 +51,10 @@ cc_toolchain(
 )
 
 cc_toolchain(
-    name = "cc-compiler-k8",
+    name = "cc-compiler-powerpc-linux-gnu",
     all_files = ":empty",
     compiler_files = ":empty",
-    cpu = "local",
-    dwp_files = ":empty",
-    dynamic_runtime_libs = [":empty"],
-    linker_files = ":empty",
-    objcopy_files = ":empty",
-    static_runtime_libs = [":empty"],
-    strip_files = ":empty",
-    supports_param_files = 0,
-)
-
-cc_toolchain(
-    name = "cc-compiler-darwin",
-    all_files = ":empty",
-    compiler_files = ":empty",
-    cpu = "darwin",
+    cpu = "powerpc-linux-gnu",
     dwp_files = ":empty",
     dynamic_runtime_libs = [":empty"],
     linker_files = ":empty",
