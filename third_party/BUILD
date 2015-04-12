@@ -27,17 +27,17 @@ java_import(
 
 java_import(
     name = "apache_commons_collections",
-    jars = ["apache_commons_collections/commons-collections-3.2.1.jar"],
+    jars = ["system_provided/commons-collections3.jar"],
 )
 
 java_import(
     name = "apache_commons_compress",
-    jars = ["apache_commons_compress/apache-commons-compress-1.9.jar"],
+    jars = ["system_provided/commons-compress.jar"],
 )
 
 java_import(
     name = "apache_commons_logging",
-    jars = ["apache_commons_logging/commons-logging-1.1.1.jar"],
+    jars = ["system_provided/commons-logging.jar"],
 )
 
 java_import(
