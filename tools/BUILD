@@ -10,7 +10,6 @@ filegroup(
         "//tools/jdk:srcs",
         "//tools/genrule:srcs",
         "//tools/cpp:srcs",
-        "//tools/objc:srcs",
         "//tools/test:srcs",
         "//tools/python:srcs",
     ],

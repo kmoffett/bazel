@@ -53,7 +53,6 @@ genrule(
     srcs = [
         "//src/main/protobuf:srcs",
         "//src/main/java:srcs",
-        "//src/tools/xcode-common:srcs",
         "//third_party:srcs",
     ],
     outs = ["doc-srcs.zip"],

@@ -7,7 +7,6 @@ filegroup(
         "//examples/gen:srcs",
         "//examples/java-native:srcs",
         "//examples/java-skylark:srcs",
-        "//examples/objc:srcs",
         "//examples/proto:srcs",
         "//examples/py:srcs",
         "//examples/py_native:srcs",

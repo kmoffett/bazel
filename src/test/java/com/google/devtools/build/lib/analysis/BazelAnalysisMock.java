@@ -26,7 +26,6 @@ import com.google.devtools.build.lib.packages.util.MockToolsConfig;
 import com.google.devtools.build.lib.rules.cpp.CppConfigurationLoader;
 import com.google.devtools.build.lib.rules.java.JavaConfigurationLoader;
 import com.google.devtools.build.lib.rules.java.JvmConfigurationLoader;
-import com.google.devtools.build.lib.rules.objc.ObjcConfigurationLoader;
 import com.google.devtools.build.lib.vfs.FileSystemUtils;
 import com.google.devtools.build.lib.vfs.Path;
 
@@ -96,8 +95,7 @@ public class BazelAnalysisMock extends AnalysisMock {
         new BazelConfiguration.Loader(),
         new CppConfigurationLoader(Functions.<String>identity()),
         new JvmConfigurationLoader(BazelRuleClassProvider.JAVA_CPU_SUPPLIER),
-        new JavaConfigurationLoader(BazelRuleClassProvider.JAVA_CPU_SUPPLIER),
-        new ObjcConfigurationLoader());
+        new JavaConfigurationLoader(BazelRuleClassProvider.JAVA_CPU_SUPPLIER));
   }
 
   @Override

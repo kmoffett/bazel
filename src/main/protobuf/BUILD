@@ -11,8 +11,6 @@ load("/tools/build_rules/genproto", "genproto")
     "crosstool_config",
     "extra_actions_base",
     "test_status",
-    "bundlemerge",
-    "xcodegen",
 ]]
 
 filegroup(

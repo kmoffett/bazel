@@ -43,7 +43,6 @@ import com.google.devtools.build.lib.bazel.rules.java.BazelJavaLibraryRule;
 import com.google.devtools.build.lib.bazel.rules.java.BazelJavaPluginRule;
 import com.google.devtools.build.lib.bazel.rules.java.BazelJavaRuleClasses;
 import com.google.devtools.build.lib.bazel.rules.java.BazelJavaTestRule;
-import com.google.devtools.build.lib.bazel.rules.objc.BazelIosTestRule;
 import com.google.devtools.build.lib.bazel.rules.python.BazelPyBinaryRule;
 import com.google.devtools.build.lib.bazel.rules.python.BazelPyLibraryRule;
 import com.google.devtools.build.lib.bazel.rules.python.BazelPyRuleClasses;
@@ -76,23 +75,6 @@ import com.google.devtools.build.lib.rules.java.JavaOptions;
 import com.google.devtools.build.lib.rules.java.JavaToolchainRule;
 import com.google.devtools.build.lib.rules.java.Jvm;
 import com.google.devtools.build.lib.rules.java.JvmConfigurationLoader;
-import com.google.devtools.build.lib.rules.objc.IosApplicationRule;
-import com.google.devtools.build.lib.rules.objc.IosDeviceRule;
-import com.google.devtools.build.lib.rules.objc.IosExtensionBinaryRule;
-import com.google.devtools.build.lib.rules.objc.IosExtensionRule;
-import com.google.devtools.build.lib.rules.objc.ObjcBinaryRule;
-import com.google.devtools.build.lib.rules.objc.ObjcBuildInfoFactory;
-import com.google.devtools.build.lib.rules.objc.ObjcBundleLibraryRule;
-import com.google.devtools.build.lib.rules.objc.ObjcBundleRule;
-import com.google.devtools.build.lib.rules.objc.ObjcCommandLineOptions;
-import com.google.devtools.build.lib.rules.objc.ObjcConfigurationLoader;
-import com.google.devtools.build.lib.rules.objc.ObjcFrameworkRule;
-import com.google.devtools.build.lib.rules.objc.ObjcImportRule;
-import com.google.devtools.build.lib.rules.objc.ObjcLibraryRule;
-import com.google.devtools.build.lib.rules.objc.ObjcOptionsRule;
-import com.google.devtools.build.lib.rules.objc.ObjcProtoLibraryRule;
-import com.google.devtools.build.lib.rules.objc.ObjcRuleClasses;
-import com.google.devtools.build.lib.rules.objc.ObjcXcodeprojRule;
 import com.google.devtools.build.lib.rules.python.PythonConfigurationLoader;
 import com.google.devtools.build.lib.rules.python.PythonOptions;
 import com.google.devtools.build.lib.rules.workspace.BindRule;
@@ -178,8 +160,7 @@ public class BazelRuleClassProvider {
           BuildConfiguration.Options.class,
           CppOptions.class,
           JavaOptions.class,
-          PythonOptions.class,
-          ObjcCommandLineOptions.class
+          PythonOptions.class
       );
 
   /**
@@ -194,7 +175,6 @@ public class BazelRuleClassProvider {
   public static void setup(ConfiguredRuleClassProvider.Builder builder) {
     builder
         .addBuildInfoFactory(new BazelJavaBuildInfoFactory())
-        .addBuildInfoFactory(new ObjcBuildInfoFactory())
         .setConfigurationCollectionFactory(new BazelConfigurationCollection())
         .setPrerequisiteValidator(new BazelPrerequisiteValidator())
         .setSkylarkAccessibleJavaClasses(skylarkBuiltinJavaObects);
@@ -256,36 +236,6 @@ public class BazelRuleClassProvider {
     builder.addRuleDefinition(new BazelJavaPluginRule());
     builder.addRuleDefinition(new JavaToolchainRule());
 
-    builder.addRuleDefinition(new BazelIosTestRule());
-    builder.addRuleDefinition(new IosDeviceRule());
-    builder.addRuleDefinition(new ObjcBinaryRule());
-    builder.addRuleDefinition(new ObjcBundleRule());
-    builder.addRuleDefinition(new ObjcBundleLibraryRule());
-    builder.addRuleDefinition(new ObjcFrameworkRule());
-    builder.addRuleDefinition(new ObjcImportRule());
-    builder.addRuleDefinition(new ObjcLibraryRule());
-    builder.addRuleDefinition(new ObjcOptionsRule());
-    builder.addRuleDefinition(new ObjcProtoLibraryRule());
-    builder.addRuleDefinition(new ObjcXcodeprojRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.CoptsRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.ObjcProtoRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.IosTestBaseRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.BundlingRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.ReleaseBundlingRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.SimulatorRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.CompilingRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.LinkingRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.ResourcesRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.XcodegenRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.AlwaysLinkRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.OptionsRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.SdkFrameworksDependerRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.CompileDependencyRule());
-    builder.addRuleDefinition(new ObjcRuleClasses.ResourceToolsRule());
-    builder.addRuleDefinition(new IosApplicationRule());
-    builder.addRuleDefinition(new IosExtensionBinaryRule());
-    builder.addRuleDefinition(new IosExtensionRule());
-
     builder.addRuleDefinition(new BazelExtraActionRule());
     builder.addRuleDefinition(new BazelActionListenerRule());
 
@@ -303,6 +253,5 @@ public class BazelRuleClassProvider {
     builder.addConfigurationFragment(new PythonConfigurationLoader(Functions.<String>identity()));
     builder.addConfigurationFragment(new JvmConfigurationLoader(JAVA_CPU_SUPPLIER));
     builder.addConfigurationFragment(new JavaConfigurationLoader(JAVA_CPU_SUPPLIER));
-    builder.addConfigurationFragment(new ObjcConfigurationLoader());
   }
 }

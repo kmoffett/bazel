@@ -34,12 +34,9 @@ java_library(
     deps = [
         ":shell",
         "//src/main/protobuf:proto_build",
-        "//src/main/protobuf:proto_bundlemerge",
         "//src/main/protobuf:proto_crosstool_config",
         "//src/main/protobuf:proto_extra_actions_base",
         "//src/main/protobuf:proto_test_status",
-        "//src/main/protobuf:proto_xcodegen",
-        "//src/tools/xcode-common",
         "//third_party:aether",
         "//third_party:apache_commons_compress",
         "//third_party:auto_value",
