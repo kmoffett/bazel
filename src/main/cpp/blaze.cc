@@ -158,7 +158,6 @@ void InitGlobals() {
 ////////////////////////////////////////////////////////////////////////
 // Logic
 
-
 // Returns the canonical form of the base dir given a root and a hashable
 // string. The resulting dir is composed of the root + md5(hashable)
 static string GetHashedBaseDir(const string &root,
@@ -170,10 +169,61 @@ static string GetHashedBaseDir(const string &root,
   return root + "/" + digest.String();
 }
 
+#ifdef SYSTEM_INSTALL_BASE
+// Computes the system install base and populates extracted_binaries from it.
+static void FindSystemInstallBase() {
+  // If --install_base was not set on the command-line, use the built-in value.
+  if (globals->options.install_base.empty())
+    globals->options.install_base = SYSTEM_INSTALL_BASE;
+
+  string bindir = globals->options.install_base + "/_embedded_binaries/";
+
+  vector<string> walk_subdirs;
+  walk_subdirs.push_back("");
+  while (!walk_subdirs.empty()) {
+    string subdir_relpath = walk_subdirs.back();
+    walk_subdirs.pop_back();
+
+    string subdir_abspath = bindir + subdir_relpath;
+    DIR *dp = opendir(subdir_abspath.c_str());
+    if (!dp)
+      die(blaze_exit_code::LOCAL_ENVIRONMENTAL_ERROR,
+          "\nFailed to list %s install base directory %s: (%d) %s",
+          globals->options.GetProductName().c_str(),
+          subdir_abspath.c_str(), errno, strerror(errno));
+
+    struct dirent *entry;
+    while ((entry = readdir(dp))) {
+      if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+        continue;
+
+      string entry_relpath = subdir_relpath + entry->d_name;
+      string entry_abspath = bindir + entry_relpath;
+      struct stat st;
+      if (stat(entry_abspath.c_str(), &st)) {
+        die(blaze_exit_code::LOCAL_ENVIRONMENTAL_ERROR,
+            "\nFailed to stat %s install base file %s: (%d) %s",
+            globals->options.GetProductName().c_str(),
+            entry_abspath.c_str(), errno, strerror(errno));
+      }
+      if (S_ISDIR(st.st_mode))
+        walk_subdirs.push_back(entry_relpath + "/");
+      else if (S_ISREG(st.st_mode))
+        globals->extracted_binaries.push_back(entry_relpath);
+      else
+        die(blaze_exit_code::LOCAL_ENVIRONMENTAL_ERROR,
+            "\nInvalid %s install base file mode %s: %o",
+            globals->options.GetProductName().c_str(),
+            entry_abspath.c_str(), st.st_mode);
+    }
+    closedir(dp);
+  }
+}
+#else
 // Returns the install base (the root concatenated with the contents of the file
 // 'install_base_key' contained as a ZIP entry in the Blaze binary); as a side
 // effect, it also populates the extracted_binaries global variable.
-static string GetInstallBase(const string &root, const string &self_path) {
+static void FindExtractedInstallBase(const string &self_path) {
   string key_file = "install_base_key";
   struct archive *blaze_zip = archive_read_new();
   archive_read_support_format_zip(blaze_zip);
@@ -213,8 +263,14 @@ static string GetInstallBase(const string &root, const string &self_path) {
         "\nFailed to close install_base_key's containing zip file");
   }
 
-  return root + "/" + install_base_key;
+  // The default install_base is <output_user_root>/install/<md5(blaze)>
+  // but if an install_base is specified on the command line, we use that as
+  // the base instead.
+  if (globals->options.install_base.empty())
+    globals->options.install_base =
+        globals->options.output_user_root + "/install/" + install_base_key;
 }
+#endif /* not SYSTEM_INSTALL_BASE */
 
 // Escapes colons by replacing them with '_C' and underscores by replacing them
 // with '_U'. E.g. "name:foo_bar" becomes "name_Cfoo_Ubar"
@@ -1333,17 +1389,11 @@ static void ComputeBaseDirectories(const string self_path) {
     globals->options.batch = true;
   }
 
-  // The default install_base is <output_user_root>/install/<md5(blaze)>
-  // but if an install_base is specified on the command line, we use that as
-  // the base instead.
-  if (globals->options.install_base.empty()) {
-    string install_user_root = globals->options.output_user_root + "/install";
-    globals->options.install_base =
-        GetInstallBase(install_user_root, self_path);
-  } else {
-    // We call GetInstallBase anyway to populate extracted_binaries.
-    GetInstallBase("", self_path);
-  }
+#ifdef SYSTEM_INSTALL_BASE
+  FindSystemInstallBase();
+#else
+  FindExtractedInstallBase(self_path);
+#endif
 
   if (globals->options.output_base.empty()) {
     globals->options.output_base = GetHashedBaseDir(
@@ -1641,7 +1691,9 @@ int main(int argc, const char *argv[]) {
   WarnFilesystemType(globals->options.output_base);
   EnsureFiniteStackLimit();
 
+#ifndef SYSTEM_INSTALL_BASE
   ExtractData(self_path);
+#endif
   EnsureCorrectRunningVersion();
   KillRunningServerIfDifferentStartupOptions();
 

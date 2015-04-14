@@ -450,8 +450,8 @@ fi
 (cd output/ ; cat client ${TO_ZIP} | ${MD5SUM} | awk '{ print $1; }' > install_base_key)
 (cd output/ ; echo "${JAVA_VERSION}" > java.version)
 (cd output/ ; find . -type f | xargs -P 10 touch -t 198001010000)
-(cd output/ ; zip $ZIPOPTS -q package.zip ${TO_ZIP} install_base_key java.version)
-cat output/client output/package.zip > output/bazel
+(cd output/ ; zip $ZIPOPTS -q install_base.zip ${TO_ZIP} install_base_key java.version)
+cat output/client output/install_base.zip > output/bazel
 zip -qA output/bazel \
   || echo "(Non-critical error, ignore.)"
 

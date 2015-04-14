@@ -45,7 +45,7 @@ genrule(
 )
 
 genrule(
-    name = "package-zip",
+    name = "install_base-zip",
     srcs = [
         "//src/main/java:bazel-main_deploy.jar",
         "//src/java_tools/buildjar:JavaBuilder_deploy.jar",
@@ -62,23 +62,23 @@ genrule(
         "install_base_key",
         ":java-version",
     ],
-    outs = ["package.zip"],
+    outs = ["install_base.zip"],
     # Terrible hack to remove timestamps in the zip file
-    cmd = "mkdir $(@D)/package-zip && " +
-          "cp $(SRCS) $(@D)/package-zip && " +
-          "touch -t 198001010000.00 $(@D)/package-zip/* && " +
-          "zip -qj $@ $(@D)/package-zip/* && " +
-          "rm -fr $(@D)/package-zip",
+    cmd = "mkdir $(@D)/install_base-zip && " +
+          "cp $(SRCS) $(@D)/install_base-zip && " +
+          "touch -t 198001010000.00 $(@D)/install_base-zip/* && " +
+          "zip -qj $@ $(@D)/install_base-zip/* && " +
+          "rm -fr $(@D)/install_base-zip",
 )
 
 genrule(
     name = "bazel-bin",
     srcs = [
         "//src/main/cpp:client",
-        "package-zip",
+        "install_base.zip",
     ],
     outs = ["bazel"],
-    cmd = "cat $(location //src/main/cpp:client) package-zip > $@ && zip -qA $@",
+    cmd = "cat $(location //src/main/cpp:client) install_base.zip > $@ && zip -qA $@",
     executable = 1,
     output_to_bindir = 1,
     visibility = [
