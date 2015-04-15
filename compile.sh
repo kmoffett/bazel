@@ -259,7 +259,7 @@ if [ -z "${BAZEL_SKIP_JAVA_COMPILATION}" ]; then
   done
 
   create_deploy_jar "bazel-main_deploy" "com.google.devtools.build.lib.bazel.BazelMain" \
-      output third_party/javascript
+      output
 fi
 
 if [ -z "${BAZEL_SKIP_SINGLEJAR_COMPILATION}" ]; then
