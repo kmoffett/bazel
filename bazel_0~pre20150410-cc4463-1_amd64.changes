@@ -1,0 +1,36 @@
+Format: 1.8
+Date: Sat, 11 Apr 2015 21:22:00 +0000
+Source: bazel
+Binary: bazel bazel-docs
+Architecture: source amd64 all
+Version: 0~pre20150410-cc4463-1
+Distribution: unstable
+Urgency: low
+Maintainer: Kyle Moffett <kyle@moffetthome.net>
+Changed-By: Kyle Moffett <kyle@moffetthome.net>
+Description:
+ bazel      - Fast and correct automated build system by Google
+ bazel-docs - Fast and correct automated build system by Google (Documentation)
+Closes: 782654
+Changes:
+ bazel (0~pre20150410-cc4463-1) unstable; urgency=low
+ .
+   * Initial release (Closes: #782654)
+Checksums-Sha1:
+ 8d05c8a04de914bbad460bf41bacfa46829234f5 1143 bazel_0~pre20150410-cc4463-1.dsc
+ ab36318d1dda27ac07bf59cce84aa89aa818460e 20832125 bazel_0~pre20150410-cc4463.orig.tar.gz
+ fff45235340226d7d510c7b8fee495ff1d55f8c3 8513372 bazel_0~pre20150410-cc4463-1.debian.tar.xz
+ 1eeb67054252cc9cabc6d432acb25a1b1c47d036 11379116 bazel_0~pre20150410-cc4463-1_amd64.deb
+ bd195c79c52ef4c87be3b2395ff3ad366c756704 151162 bazel-docs_0~pre20150410-cc4463-1_all.deb
+Checksums-Sha256:
+ 55d0d07468ac27348803f8d4c06ee6444c3af44ae89d7a3b65a264216943bd46 1143 bazel_0~pre20150410-cc4463-1.dsc
+ 1f7c0cc4a9a988a3a7f8ef415859616539e64a53c3f842688e04bf13f1f7eec8 20832125 bazel_0~pre20150410-cc4463.orig.tar.gz
+ ac93c520d48ce8a563485db7e06cc0a2be49268c23631ae856a7b4c78d572013 8513372 bazel_0~pre20150410-cc4463-1.debian.tar.xz
+ d6e525ba12e949bd3f7f98424218295d4e0a2ca92a0f5e1604daeb2ba84680a6 11379116 bazel_0~pre20150410-cc4463-1_amd64.deb
+ a7fcb952da9a07587477374a6db006b35150d6d7a6486dde8b2ebd36e2778939 151162 bazel-docs_0~pre20150410-cc4463-1_all.deb
+Files:
+ f7c8dd8ff44b4c4e4a94b36b52c50b6c 1143 devel optional bazel_0~pre20150410-cc4463-1.dsc
+ f016ec4fa8bf393a11065b1adf9030c7 20832125 devel optional bazel_0~pre20150410-cc4463.orig.tar.gz
+ c4a3e3e45c5bb126946540a9d3fe738a 8513372 devel optional bazel_0~pre20150410-cc4463-1.debian.tar.xz
+ 3ae7f9409b6a771f91ca384d3a01e655 11379116 devel optional bazel_0~pre20150410-cc4463-1_amd64.deb
+ 2bafcd824230928c5782bb37f824442c 151162 doc optional bazel-docs_0~pre20150410-cc4463-1_all.deb
