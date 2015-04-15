@@ -48,9 +48,9 @@ PROTO_FILES=$(ls src/main/protobuf/*.proto)
 LIBRARY_JARS=$(find third_party -name *.jar | tr "\n" " ")
 DIRS=$(echo src/main/java output/src)
 SINGLEJAR_DIRS="src/java_tools/singlejar/java src/main/java/com/google/devtools/build/lib/shell"
-SINGLEJAR_LIBRARIES="third_party/guava/guava-18.0.jar third_party/jsr305/jsr-305.jar"
+SINGLEJAR_LIBRARIES="third_party/guava/guava-18.0.jar third_party/system_provided/jsr305.jar"
 BUILDJAR_DIRS="src/java_tools/buildjar/java/com/google/devtools/build/buildjar output/src/com/google/devtools/build/lib/view/proto"
-BUILDJAR_LIBRARIES="third_party/guava/guava-18.0.jar third_party/system_provided/protobuf.jar third_party/jsr305/jsr-305.jar"
+BUILDJAR_LIBRARIES="third_party/guava/guava-18.0.jar third_party/system_provided/protobuf.jar third_party/system_provided/jsr305.jar"
 
 MSYS_DLLS=""
 PATHSEP=":"

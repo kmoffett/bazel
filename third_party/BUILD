@@ -42,12 +42,12 @@ java_import(
 
 java_import(
     name = "apache_httpclient",
-    jars = ["apache_httpclient/httpclient-4.2.5.jar"],
+    jars = ["system_provided/httpclient.jar"],
 )
 
 java_import(
     name = "apache_httpcore",
-    jars = ["apache_httpcore/httpcore-4.2.4.jar"],
+    jars = ["system_provided/httpcore.jar"],
 )
 
 java_import(
@@ -131,7 +131,7 @@ java_import(
 
 java_import(
     name = "gson",
-    jars = ["gson/gson-2.2.4.jar"],
+    jars = ["system_provided/gson.jar"],
 )
 
 java_import(
@@ -141,12 +141,12 @@ java_import(
 
 java_import(
     name = "joda_time",
-    jars = ["joda_time/joda-time-2.3.jar"],
+    jars = ["system_provided/joda-time.jar"],
 )
 
 java_import(
     name = "jsr305",
-    jars = ["jsr305/jsr-305.jar"],
+    jars = ["system_provided/jsr305.jar"],
 )
 
 java_import(
@@ -165,12 +165,12 @@ java_import(
 
 java_import(
     name = "plexus_interpolation",
-    jars = ["plexus_interpolation/plexus-interpolation-1.22.jar"],
+    jars = ["system_provided/plexus-interpolation.jar"],
 )
 
 java_import(
     name = "plexus_utils",
-    jars = ["plexus_utils/plexus-utils-3.0.21.jar"],
+    jars = ["system_provided/plexus-utils2.jar"],
 )
 
 java_import(
@@ -180,7 +180,7 @@ java_import(
 
 java_import(
     name = "tomcat_annotations_api",
-    jars = ["tomcat_annotations_api/tomcat-annotations-api-8.0.5.jar"],
+    jars = ["system_provided/tomcat8-annotations-api.jar"],
 )
 
 # Testing
@@ -193,8 +193,8 @@ java_import(
 java_import(
     name = "junit4",
     jars = [
-        "hamcrest/hamcrest-core-1.3.jar",
-        "junit/junit-4.11.jar",
+        "system_provided/hamcrest-core.jar",
+        "system_provided/junit4.jar",
     ],
 )
 
@@ -212,27 +212,7 @@ java_import(
 filegroup(
     name = "junit4-jars",
     srcs = [
-        "hamcrest/hamcrest-core-1.3.jar",
-        "junit/junit-4.11.jar",
+        "system_provided/hamcrest-core.jar",
+        "system_provided/junit4.jar",
     ],
-)
-
-config_setting(
-    name = "windows_mingw",
-    values = {"compiler": "windows_mingw"},
-)
-
-config_setting(
-    name = "windows_msys64_mingw64",
-    values = {"compiler": "windows_msys64_mingw64"},
-)
-
-config_setting(
-    name = "windows_clang",
-    values = {"compiler": "windows_clang"},
-)
-
-config_setting(
-    name = "darwin",
-    values = {"cpu": "darwin"},
 )
